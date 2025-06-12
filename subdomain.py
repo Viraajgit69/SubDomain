@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 # Cloudflare configuration
 CLOUDFLARE_API_TOKEN = "qEwlnRQFGTgOCiiJDl8LrObdWmm-WhAiLl9KUBJR"
-ZONE_ID = "YOUR_CLOUDFLARE_ZONE_ID"
-DOMAIN = "ragnar.work"  # Update to your domain
+ZONE_ID = "dc34f5360b5d7563d67d4735f3ee8464"
+DOMAIN = "fnxdanger.com"  # Update to your domain
 
 # Initialize Cloudflare client
 cf = Cloudflare(api_token=CLOUDFLARE_API_TOKEN)
