@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Cloudflare configuration
-CLOUDFLARE_API_TOKEN = "qEwlnRQFGTgOCiiJDl8LrObdWmm-WhAiLl9KUBJR"
+CLOUDFLARE_API_TOKEN = "valtAAlNQyJf1-7mpjQQmUN3zCE3w_vWt2uVt3PR"
 ZONE_ID = "dc34f5360b5d7563d67d4735f3ee8464"
 DOMAIN = "fnxdanger.com"
 
