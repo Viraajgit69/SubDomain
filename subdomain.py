@@ -23,7 +23,7 @@ ZONE_ID = "dc34f5360b5d7563d67d4735f3ee8464"
 DOMAIN = "fnxdanger.com"
 
 # Initialize Cloudflare client
-cf = CloudFlare.cloudflare(token=CLOUDFLARE_API_TOKEN)
+cf = cloudflare.CloudFlare(token=CLOUDFLARE_API_TOKEN)
 
 # Conversation states
 CHOOSING_ACTION, SUBDOMAIN, IP_ADDRESS = range(3)
