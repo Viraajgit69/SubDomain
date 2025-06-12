@@ -1,5 +1,5 @@
 import logging
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Cloudflare configuration
 CLOUDFLARE_API_TOKEN = "qEwlnRQFGTgOCiiJDl8LrObdWmm-WhAiLl9KUBJR"
 ZONE_ID = "dc34f5360b5d7563d67d4735f3ee8464"
-DOMAIN = "fnxdanger.com"  # Update to your domain
+DOMAIN = "fnxdanger.com"
 
 # Initialize Cloudflare client
 cf = CloudFlare.CloudFlare(token=CLOUDFLARE_API_TOKEN)
@@ -29,20 +29,15 @@ cf = CloudFlare.CloudFlare(token=CLOUDFLARE_API_TOKEN)
 CHOOSING_ACTION, SUBDOMAIN, IP_ADDRESS = range(3)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Start the conversation and show action options."""
-    reply_keyboard = [
-        ["Add Domain"],
-        ["Remove Domain"],
-        ["Update Domain"],
-    ]
+    reply_keyboard = [["Add Domain"], ["Remove Domain"], ["Update Domain"]]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     await update.message.reply_text(
-        "🌟 Domain Manager Bot 🌟\nSelect an action below or use /help for detailed instructions:",
-        reply_markup={"keyboard": reply_keyboard, "one_time_keyboard": True},
+        "\U0001F31F Domain Manager Bot \U0001F31F\nSelect an action below or use /help for detailed instructions:",
+        reply_markup=markup
     )
     return CHOOSING_ACTION
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a help message."""
     await update.message.reply_text(
         "Use the following options:\n"
         "- Add Domain: Create a new subdomain.\n"
@@ -52,7 +47,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
 
 async def action_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle the user's action choice."""
     context.user_data["action"] = update.message.text
     if update.message.text == "Add Domain":
         await update.message.reply_text("Enter your desired subdomain:")
@@ -66,58 +60,53 @@ async def action_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return ConversationHandler.END
 
 async def subdomain_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle the subdomain input."""
     context.user_data["subdomain"] = update.message.text.lower()
-    if context.user_data["action"] == "Add Domain" or context.user_data["action"] == "Update Domain":
+    full_domain = f"{context.user_data['subdomain']}.{DOMAIN}"
+    if context.user_data["action"] in ["Add Domain", "Update Domain"]:
         await update.message.reply_text("Please provide the IP address:")
         return IP_ADDRESS
     elif context.user_data["action"] == "Remove Domain":
         try:
-            dns_records = cf.dns.records.list(zone_id=ZONE_ID)
+            dns_records = cf.zones.dns_records.get(ZONE_ID)
             for record in dns_records:
-                if record.name == f"{context.user_data['subdomain']}.{DOMAIN}":
-                    cf.dns.records.delete(zone_id=ZONE_ID, record_id=record.id)
-                    await update.message.reply_text(f"Successfully removed {context.user_data['subdomain']}.{DOMAIN}")
+                if record["name"] == full_domain:
+                    cf.zones.dns_records.delete(ZONE_ID, record["id"])
+                    await update.message.reply_text(f"Successfully removed {full_domain}")
                     return ConversationHandler.END
-            await update.message.reply_text(f"Subdomain {context.user_data['subdomain']}.{DOMAIN} not found!")
+            await update.message.reply_text(f"Subdomain {full_domain} not found!")
         except Exception as e:
             logger.error(f"Error removing subdomain: {e}")
             await update.message.reply_text(f"Failed to remove subdomain: {str(e)}")
         return ConversationHandler.END
 
 async def ip_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle the IP address input and create/update the DNS record."""
     context.user_data["ip"] = update.message.text
     full_domain = f"{context.user_data['subdomain']}.{DOMAIN}"
     try:
+        dns_records = cf.zones.dns_records.get(ZONE_ID)
         if context.user_data["action"] == "Add Domain":
-            dns_records = cf.dns.records.list(zone_id=ZONE_ID)
             for record in dns_records:
-                if record.name == full_domain:
+                if record["name"] == full_domain:
                     await update.message.reply_text(f"Subdomain {full_domain} already exists!")
                     return ConversationHandler.END
-            cf.dns.records.create(
-                zone_id=ZONE_ID,
-                type="A",
-                name=context.user_data["subdomain"],
-                content=context.user_data["ip"],
-                ttl=3600,
-                proxied=True
-            )
+            cf.zones.dns_records.post(ZONE_ID, data={
+                "type": "A",
+                "name": context.user_data["subdomain"],
+                "content": context.user_data["ip"],
+                "ttl": 3600,
+                "proxied": True
+            })
             await update.message.reply_text(f"Success! {full_domain} created with IP {context.user_data['ip']}")
         elif context.user_data["action"] == "Update Domain":
-            dns_records = cf.dns.records.list(zone_id=ZONE_ID)
             for record in dns_records:
-                if record.name == full_domain:
-                    cf.dns.records.update(
-                        zone_id=ZONE_ID,
-                        record_id=record.id,
-                        type="A",
-                        name=context.user_data["subdomain"],
-                        content=context.user_data["ip"],
-                        ttl=3600,
-                        proxied=True
-                    )
+                if record["name"] == full_domain:
+                    cf.zones.dns_records.put(ZONE_ID, record["id"], data={
+                        "type": "A",
+                        "name": context.user_data["subdomain"],
+                        "content": context.user_data["ip"],
+                        "ttl": 3600,
+                        "proxied": True
+                    })
                     await update.message.reply_text(f"Success! {full_domain} updated with IP {context.user_data['ip']}")
                     return ConversationHandler.END
             await update.message.reply_text(f"Subdomain {full_domain} not found!")
@@ -128,15 +117,12 @@ async def ip_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Cancel the conversation."""
     await update.message.reply_text("Conversation canceled.")
     return ConversationHandler.END
 
 def main() -> None:
-    """Start the bot."""
     application = Application.builder().token("7984340301:AAEGaPuPOEdQ8FTc7TuwC1tLHRm1R_NG4so").build()
 
-    # Conversation handler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -147,11 +133,8 @@ def main() -> None:
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    # Add handlers
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("help", help_command))
-
-    # Start the bot
     application.run_polling()
 
 if __name__ == "__main__":
