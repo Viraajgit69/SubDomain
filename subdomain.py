@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Cloudflare configuration
-CLOUDFLARE_API_TOKEN = "YOUR_CLOUDFLARE_API_TOKEN"
+CLOUDFLARE_API_TOKEN = "qEwlnRQFGTgOCiiJDl8LrObdWmm-WhAiLl9KUBJR"
 ZONE_ID = "YOUR_CLOUDFLARE_ZONE_ID"
 DOMAIN = "ragnar.work"  # Update to your domain
 
