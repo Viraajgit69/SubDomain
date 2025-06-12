@@ -8,7 +8,7 @@ from telegram.ext import (
     ConversationHandler,
     ContextTypes,
 )
-from Cloudflare import Cloudflare
+import CloudFlare
 
 # Enable logging
 logging.basicConfig(
